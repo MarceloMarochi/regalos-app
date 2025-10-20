@@ -2,15 +2,16 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { UpdateContributionSchema } from "@/lib/validators";
 
-type Params = { params: { id: string } };
-
-export async function PATCH(req: Request, { params }: Params) {
+export async function PATCH(
+  req: Request,
+  context: { params: { id: string } } // ✅ tipado inline compatible con Next.js 15
+) {
   try {
     const body = await req.json();
     const data = UpdateContributionSchema.parse(body);
 
     const updated = await prisma.contribution.update({
-      where: { id: params.id },
+      where: { id: context.params.id },
       data: { paid: data.paid },
     });
 
