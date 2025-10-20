@@ -1,0 +1,44 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Person {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  alias     String?
+  giftsFor  Gift[]   @relation("PayTo")
+  contribs  Contribution[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Gift {
+  id            String   @id @default(cuid())
+  title         String
+  month         Int
+  year          Int
+  totalAmount   Int
+  payToId       String
+  payTo         Person   @relation("PayTo", fields: [payToId], references: [id])
+  notes         String?
+  contribs      Contribution[]
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
+model Contribution {
+  id        String  @id @default(cuid())
+  personId  String
+  giftId    String
+  shouldPay Int
+  paid      Int     @default(0)
+  person    Person  @relation(fields: [personId], references: [id])
+  gift      Gift    @relation(fields: [giftId], references: [id])
+
+  @@unique([personId, giftId])
+}
