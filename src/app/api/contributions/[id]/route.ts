@@ -2,14 +2,21 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { UpdateContributionSchema } from "@/lib/validators";
 
-export async function PATCH(req: Request, context: any) {
-  // 👆 quitamos el tipo y usamos "any" para evitar el chequeo estricto
+export async function PATCH(req: Request) {
   try {
+    // 🧠 Obtener el id desde la URL (Next 15 ya no pasa `context.params`)
+    const url = new URL(req.url);
+    const id = url.pathname.split("/").pop(); // obtiene el último segmento de la ruta
+
+    if (!id) {
+      return NextResponse.json({ error: "ID faltante en la URL" }, { status: 400 });
+    }
+
     const body = await req.json();
     const data = UpdateContributionSchema.parse(body);
 
     const updated = await prisma.contribution.update({
-      where: { id: context.params.id },
+      where: { id },
       data: { paid: data.paid },
     });
 
@@ -25,4 +32,3 @@ export async function PATCH(req: Request, context: any) {
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
-
