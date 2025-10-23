@@ -1,32 +1,47 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Dialog, DialogTrigger, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 export function AddGiftDialog() {
+  const router = useRouter();
+
   const [people, setPeople] = useState<any[]>([]);
   const [open, setOpen] = useState(false);
 
   const [title, setTitle] = useState("");
-  const [month, setMonth] = useState(new Date().getMonth() + 1);
+  const [month, setMonth] = useState(new Date().getMonth() + 1); // 1..12
   const [year, setYear] = useState(new Date().getFullYear());
   const [total, setTotal] = useState(0);
   const [payTo, setPayTo] = useState("");
-  const [contribs, setContribs] = useState<{ id: string; amount: number }[]>([]);
+  const [contribs, setContribs] = useState<{ id: string; amount: number }[]>(
+    []
+  );
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) {
-      fetch("/api/people")
-        .then((r) => r.json())
-        .then((data) => {
-          setPeople(data);
-          setContribs(data.map((p: any) => ({ id: p.id, amount: 0 })));
-        });
-    }
+    if (!open) return;
+    fetch("/api/people", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        setPeople(data);
+        setContribs(data.map((p: any) => ({ id: p.id, amount: 0 })));
+      })
+      .catch(() => {
+        setPeople([]);
+        setContribs([]);
+      });
   }, [open]);
 
   const handleChangeAmount = (id: string, value: string) => {
@@ -36,35 +51,59 @@ export function AddGiftDialog() {
   };
 
   const createGift = async () => {
-    const contributions = contribs.map((c) => ({
-      personId: c.id,
-      shouldPay: c.amount,
-    }));
+    try {
+      setSaving(true);
 
-    await fetch("/api/gifts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title,
-        month,
-        year,
-        totalAmount: total,
-        payToId: payTo,
-        contributions,
-      }),
-    });
+      const contributions = contribs.map((c) => ({
+        personId: c.id,
+        shouldPay: c.amount,
+      }));
 
-    // Reiniciar formulario
-    setTitle("");
-    setTotal(0);
-    setPayTo("");
-    setContribs(contribs.map((c) => ({ ...c, amount: 0 })));
-    setOpen(false);
+      const res = await fetch("/api/gifts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          month, // 1..12
+          year,
+          totalAmount: total,
+          payToId: payTo,
+          contributions,
+        }),
+      });
+
+      if (!res.ok) {
+        console.error("Error al crear regalo", await res.text());
+        return;
+      }
+
+      // limpiar y cerrar
+      setTitle("");
+      setTotal(0);
+      setPayTo("");
+      setContribs((prev) => prev.map((c) => ({ ...c, amount: 0 })));
+      setOpen(false);
+
+      // 🔄 refrescar el árbol de server components
+      router.refresh();
+    } finally {
+      setSaving(false);
+    }
   };
 
   const months = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    "Enero",
+    "Febrero",
+    "Marzo",
+    "Abril",
+    "Mayo",
+    "Junio",
+    "Julio",
+    "Agosto",
+    "Septiembre",
+    "Octubre",
+    "Noviembre",
+    "Diciembre",
   ];
 
   return (
@@ -85,7 +124,9 @@ export function AddGiftDialog() {
           <div className="flex-1">
             <Label>Mes</Label>
             <Select value={String(month)} onValueChange={(v) => setMonth(Number(v))}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 {months.map((m, i) => (
                   <SelectItem key={i} value={String(i + 1)}>
@@ -117,7 +158,9 @@ export function AddGiftDialog() {
         <div>
           <Label>Transferir a</Label>
           <Select value={payTo} onValueChange={setPayTo}>
-            <SelectTrigger><SelectValue placeholder="Seleccionar persona" /></SelectTrigger>
+            <SelectTrigger>
+              <SelectValue placeholder="Seleccionar persona" />
+            </SelectTrigger>
             <SelectContent>
               {people.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
@@ -137,17 +180,15 @@ export function AddGiftDialog() {
                 type="number"
                 className="w-1/2"
                 placeholder="Monto"
-                value={
-                  contribs.find((c) => c.id === p.id)?.amount || ""
-                }
+                value={contribs.find((c) => c.id === p.id)?.amount || ""}
                 onChange={(e) => handleChangeAmount(p.id, e.target.value)}
               />
             </div>
           ))}
         </div>
 
-        <Button className="w-full" onClick={createGift}>
-          Guardar
+        <Button className="w-full" onClick={createGift} disabled={saving}>
+          {saving ? "Guardando..." : "Guardar"}
         </Button>
       </DialogContent>
     </Dialog>

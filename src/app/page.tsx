@@ -4,15 +4,20 @@ import { ManagePeopleDialog } from "@/components/ManagePeopleDialog";
 import { YearMonthCarousel } from "@/components/YearMonthCarousel";
 import { getBaseUrl } from "@/lib/baseUrl";
 
+export const revalidate = 0;                 // ⛔ ISR
+export const dynamic = "force-dynamic";      // ⛔ SSG/estático
+
 export default async function Home() {
   const base = getBaseUrl();
 
   let gifts: any[] = [];
   try {
-    const res = await fetch(`${base}/api/gifts`, { cache: "no-store" });
+    const res = await fetch(`${base}/api/gifts`, {
+      cache: "no-store",
+      next: { tags: ["gifts"] },             // opcional, para revalidateTag
+    });
     if (res.ok) gifts = await res.json();
-  } catch (_e) {
-    // En caso de error en prod, mostramos la UI vacía (no tirar la página)
+  } catch {
     gifts = [];
   }
 
