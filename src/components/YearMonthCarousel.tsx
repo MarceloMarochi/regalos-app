@@ -6,9 +6,9 @@ import { MonthCarousel } from "./MonthCarousel";
 type Gift = {
   id: string;
   title: string;
-  month: number;   // 👈 1..12 en DB
+  month: number;   // 1..12
   year: number;
-  // ...resto de campos
+  // ...
 };
 
 export function YearMonthCarousel({ gifts }: { gifts: Gift[] }) {
@@ -17,7 +17,7 @@ export function YearMonthCarousel({ gifts }: { gifts: Gift[] }) {
 
   const [year, setYear] = useState<number>(currentYear);
 
-  // Agrupar SIEMPRE con claves 1..12 (aunque estén vacías)
+  // ✅ Mapa con claves 1..12 garantizadas
   const giftsByMonth = useMemo(() => {
     const map: Record<number, Gift[]> = {};
     for (let m = 1; m <= 12; m++) map[m] = [];
@@ -26,25 +26,22 @@ export function YearMonthCarousel({ gifts }: { gifts: Gift[] }) {
         map[g.month].push(g);
       }
     }
+    // DEBUG opcional:
+    console.log("Año seleccionado", year, "Octubre:", map[10]);
     return map;
   }, [gifts, year]);
-
-  const prevYear = () => setYear((y) => y - 1);
-  const nextYear = () => setYear((y) => y + 1);
 
   return (
     <section className="flex flex-col items-center gap-3">
       <div className="flex items-center gap-2">
-        <Button variant="outline" onClick={prevYear}>◀</Button>
-        <div className="text-center">
-          <div className="text-2xl font-bold">{year}</div>
-        </div>
-        <Button variant="outline" onClick={nextYear}>▶</Button>
+        <Button variant="outline" onClick={() => setYear(y => y - 1)}>◀</Button>
+        <div className="text-2xl font-bold">{year}</div>
+        <Button variant="outline" onClick={() => setYear(y => y + 1)}>▶</Button>
       </div>
 
       <MonthCarousel
-        giftsByMonth={giftsByMonth}               // 👈 mapa 1..12
-        initialMonth1to12={currentMonth1to12}     // 👈 mes actual 1..12
+        giftsByMonth={giftsByMonth}                 // 👈 1..12
+        initialMonth1to12={currentMonth1to12}       // 👈 mes actual 1..12
       />
     </section>
   );
